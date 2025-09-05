@@ -3,12 +3,12 @@ const int ALIN_PIN = 9;  // High-side input pin
 const int AHIN_PIN = 10; // Low-side input pin
 const int BHIN_PIN = 5;  // High-side input pin
 const int BLIN_PIN = 6; // Low-side input pin
-const int switchPin = 4;
+const int switchPin = 4; //Forward or Reverse
 const int onOffPin = 3;
-float R_FIXED =1500;
+float R_FIXED = 1500;
 int val;
 float vOut;
-float vIn =5;
+float vIn = 5;
 
 void setup() {
   Serial.begin(9600);
@@ -28,15 +28,16 @@ void setup() {
 
 void loop() {
 
-if(digitalRead(onOffPin)==HIGH){
-calculateTemperature();
-  val = map(analogRead(A0), 0, 1023, 0, 255);
-  if (digitalRead(switchPin)==LOW) {
-    reverseDrive();
+  if (digitalRead(onOffPin) == HIGH) {
+    calculateTemperature();
+    val = map(analogRead(A0), 0, 1023, 0, 255);
+    if (digitalRead(switchPin) == LOW) {
+      reverseDrive();
+    }
+    else {
+      forwardDrive();
+    }
   }
-  else {
-    forwardDrive();
-  }}
   else {
     stopMotor();
   }
@@ -62,17 +63,17 @@ void forwardDrive() {
   Serial.print("FORWARD: ");
   Serial.println(val);
 }
-void stopMotor(){
-   analogWrite(BLIN_PIN, 0);
+void stopMotor() {
+  analogWrite(BLIN_PIN, 0);
   analogWrite(BHIN_PIN, 0);
   analogWrite(ALIN_PIN, 0);
   analogWrite(AHIN_PIN, 0);
 }
 
 float calculateTemperature() {
-  vOut=map(analogRead(A2),0, 1023, 0, 5000)/1000.00;
-  float r = (vOut * R_FIXED)/(vIn-vOut);
-  
+  vOut = map(analogRead(A2), 0, 1023, 0, 5000) / 1000.00;
+  float r = (vOut * R_FIXED) / (vIn - vOut);
+
   const float R25 = 1500.0; // Your thermistor's resistance at 25°C
   float A1_coef, B1_coef, C1_coef, D1_coef;
 
