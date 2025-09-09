@@ -15,17 +15,25 @@ void loop() {
   // Count from 00.00 to 10.99
   for (int whole = 0; whole <= 10; whole++) {
     for (int decimal = 0; decimal <= 99; decimal++) {
-      // Build number like "12.34"
-      int value = whole * 100 + decimal; // e.g., 12*100 + 34 = 1234
+      // Compute digits: XX.XX
+      int left = whole / 10;         // tens
+      int right = whole % 10;        // ones
+      int d1 = decimal / 10;         // tenths
+      int d2 = decimal % 10;         // hundredths
 
-      // Show with decimal point at position 2 (between digits 2 and 3)
-      display.showNumberDecEx(value, 0b01000000, true);
+      uint8_t data[4];
+      data[0] = display.encodeDigit(left);
+      data[1] = display.encodeDigit(right) | 0x80; // add decimal point here
+      data[2] = display.encodeDigit(d1);
+      data[3] = display.encodeDigit(d2);
 
-      delay(50); // Adjust speed here (50ms per step)
+      display.setSegments(data);
+
+      delay(50); // adjust counting speed
     }
   }
 
-  // After finishing, clear and loop again
+  // After finishing, clear and restart
   display.clear();
   delay(1000);
 }
