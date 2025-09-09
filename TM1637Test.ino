@@ -11,15 +11,17 @@ void setup() {
 }
 
 void loop() {
-  // Example: show 1.50
-  uint8_t data[4];
+  for (int whole = 0; whole <= 10; whole++) {
+    for (int decimal = 0; decimal <= 99; decimal++) {
+      int value = whole * 100 + decimal; // e.g., 1.50 → 150
 
-  data[0] = display.encodeDigit(0);                // leading 0
-  data[1] = display.encodeDigit(1) | 0x80;         // "1." ← dot here
-  data[2] = display.encodeDigit(5);                // "5"
-  data[3] = display.encodeDigit(0);                // "0"
+      // 0b0100 → decimal point after 2nd digit (xx.xx)
+      display.showNumberDecEx(value, 0b0100, true);
 
-  display.setSegments(data);
+      delay(50);
+    }
+  }
 
-  while (1); // stop here for demo
+  display.clear();
+  delay(1000);
 }
