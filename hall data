@@ -1,3 +1,13 @@
+State 1: 001  (White high)
+State 2: 101  (Blue + White high)
+State 3: 100  (Blue high)
+State 4: 110  (Green + Blue high)
+State 5: 010  (Green high)
+State 6: 011  (Green + White high)
+→ back to State 1 (001)
+
+
+
 : 64  White: 71
 Green: 0  Blue: 74  White: 81
 Green: 0  Blue: 83  White: 90
