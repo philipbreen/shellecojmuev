@@ -18,18 +18,24 @@ void loop() {
 }
 
 byte hallToState() {
-  // Read analog values (0–1023)
   int analogA = analogRead(hallAPin);
   int analogB = analogRead(hallBPin);
   int analogC = analogRead(hallCPin);
 
-  // Convert to digital (0 or 1) using a threshold
-  // Adjust threshold based on your Hall sensors (usually around 512)
-  hallA = (analogA > 512) ? 1 : 0;
-  hallB = (analogB > 512) ? 1 : 0;
-  hallC = (analogC > 512) ? 1 : 0;
+  // Use lower threshold
+  const int threshold = 65;
 
-  // Combine bits into a 3-bit state (0–7)
+  hallA = (analogA > threshold) ? 1 : 0;
+  hallB = (analogB > threshold) ? 1 : 0;
+  hallC = (analogC > threshold) ? 1 : 0;
+
+  Serial.print("Green: ");
+  Serial.print(analogB);
+  Serial.print("  Blue: ");
+  Serial.print(analogA);
+  Serial.print("  White: ");
+  Serial.println(analogC);
+
   byte state = (hallA << 2) | (hallB << 1) | hallC;
   return state;
 }
@@ -40,31 +46,9 @@ void driveMotor() {
   if (state <= 5) {
     lastValidState = state;
   } else {
-    // invalid reading, reuse last valid one or stop motor
     state = lastValidState;
   }
 
   Serial.print("State: ");
   Serial.println(state);
-
-  switch (state) {
-    case 0:
-      // drive 0
-      break;
-    case 1:
-      // drive 1
-      break;
-    case 2:
-      // drive 2
-      break;
-    case 3:
-      // drive 3
-      break;
-    case 4:
-      // drive 4
-      break;
-    case 5:
-      // drive 5
-      break;
-  }
 }
