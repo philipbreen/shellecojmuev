@@ -4,12 +4,13 @@ const int hallCPin = A2; // White
 
 static byte lastValidState = 0;
 
-int hallA;
-int hallB;
-int hallC;
+int hallA, hallB, hallC;
 
 void setup() {
   Serial.begin(9600);
+  pinMode(hallAPin, INPUT_PULLUP); // internal pull-up just in case
+  pinMode(hallBPin, INPUT_PULLUP);
+  pinMode(hallCPin, INPUT_PULLUP);
 }
 
 void loop() {
@@ -18,24 +19,11 @@ void loop() {
 }
 
 byte hallToState() {
-  int analogA = analogRead(hallAPin);
-  int analogB = analogRead(hallBPin);
-  int analogC = analogRead(hallCPin);
+  hallA = digitalRead(hallAPin);
+  hallB = digitalRead(hallBPin);
+  hallC = digitalRead(hallCPin);
 
-  // Use lower threshold
-  const int threshold = 65;
-
-  hallA = (analogA > threshold) ? 1 : 0;
-  hallB = (analogB > threshold) ? 1 : 0;
-  hallC = (analogC > threshold) ? 1 : 0;
-
-  Serial.print("Green: ");
-  Serial.print(analogB);
-  Serial.print("  Blue: ");
-  Serial.print(analogA);
-  Serial.print("  White: ");
-  Serial.println(analogC);
-
+  // note: Hall sensors are often active low (reverse bits if needed)
   byte state = (hallA << 2) | (hallB << 1) | hallC;
   return state;
 }
