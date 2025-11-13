@@ -2,36 +2,51 @@ const int hallAPin = A0; // Blue
 const int hallBPin = A1; // Green
 const int hallCPin = A2; // White
 
+static byte lastValidState = 0;
+
+int hallA, hallB, hallC;
+
 void setup() {
   Serial.begin(9600);
-
-  // External pull-ups already exist → use plain INPUT
   pinMode(hallAPin, INPUT);
   pinMode(hallBPin, INPUT);
   pinMode(hallCPin, INPUT);
 }
 
 void loop() {
-  // Read the raw voltages
-  int aRaw = analogRead(hallAPin);
-  int bRaw = analogRead(hallBPin);
-  int cRaw = analogRead(hallCPin);
-
-  // Convert analog values (0–1023) into digital 0/1 with a threshold
-  // If you see only 1s, lower threshold to ~300
-  int threshold = 512;
-
-  int hallA = (aRaw > threshold) ? 1 : 0;
-  int hallB = (bRaw > threshold) ? 1 : 0;
-  int hallC = (cRaw > threshold) ? 1 : 0;
-
-  Serial.print("A: "); Serial.print(hallA);
-  Serial.print("  B: "); Serial.print(hallB);
-  Serial.print("  C: "); Serial.print(hallC);
-  Serial.print("   (raw: ");
-  Serial.print(aRaw); Serial.print(",");
-  Serial.print(bRaw); Serial.print(",");
-  Serial.print(cRaw); Serial.println(")");
-  
+  driveMotor();
   delay(100);
+}
+
+byte hallToState() {
+  // Read analog values (0–1023)
+  int analogA = analogRead(hallAPin);
+  int analogB = analogRead(hallBPin);
+  int analogC = analogRead(hallCPin);
+
+  // Convert analog readings to digital (0 or 1)
+  const int threshold = 200;
+  hallA = (analogA > threshold) ? 1 : 0;
+  hallB = (analogB > threshold) ? 1 : 0;
+  hallC = (analogC > threshold) ? 1 : 0;
+
+  // Combine into a 3-bit state
+  byte state = (hallA << 2) | (hallB << 1) | hallC;
+  return state;
+}
+
+void driveMotor() {
+  byte state = hallToState();
+
+  if (state <= 5) {
+    lastValidState = state;
+  } else {
+    state = lastValidState;
+  }
+
+  Serial.print("State: ");
+  Serial.print(state);
+  Serial.print("  A: "); Serial.print(hallA);
+  Serial.print("  B: "); Serial.print(hallB);
+  Serial.print("  C: "); Serial.println(hallC);
 }
