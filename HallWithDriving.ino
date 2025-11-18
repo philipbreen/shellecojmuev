@@ -2,8 +2,9 @@ const int hallAPin = 5; // Blue
 const int hallBPin = 6; // Green
 const int hallCPin = 7; // White
 int hallA, hallB, hallC;
-const int threshold = 100;
-const int SPEED= 100;
+const int potPin =A0;
+int SPEED;
+
 const int aLowPin;
 const int bLowPin;
 const int cLowPin;
@@ -16,10 +17,18 @@ void setup() {
   pinMode(hallAPin, INPUT);
   pinMode(hallBPin, INPUT);
   pinMode(hallCPin, INPUT);
+  
+  pinMode(aLowPin, OUTPUT);
+  pinMode(bLowPin, OUTPUT);
+  pinMode(cLowPin, OUTPUT);
+  pinMode(aHighPin, OUTPUT);
+  pinMode(bHighPin, OUTPUT);
+  pinMode(cHighPin, OUTPUT);
 }
 
 void loop() {
   driveMotor();
+  
   //delay(100);
 }
 
@@ -35,6 +44,7 @@ byte hallToState() {
 
 void driveMotor() {
   byte state = hallToState();
+  SPEED = map(analogRead(potPin), 0, 1023, 0, 255);
 /*
   Serial.print("A(Blue): "); Serial.print(hallA);
   Serial.print("  B(Green): "); Serial.print(hallB);
