@@ -1,28 +1,55 @@
 #define SIGNAL_PIN A0
 
-float ref_voltage = 1.1;
-const int samples = 5;
+const int oversamples = 4096;
+float vref = 3.3;
+
+const float MAX_AMPS = 15.0;
+const unsigned long UNSAFE_DURATION = 333; 
+
+unsigned long overLimitStart = 0;
+bool isOverLimit = false;
 
 void setup() {
-  Serial.begin(9600);
-  analogReference(INTERNAL);
+  Serial.begin(115200);
+  analogReadResolution(12);
 }
 
 void loop() {
 
   long total = 0;
 
-  for(int i = 0; i < samples; i++) {
+  for (int i = 0; i < oversamples; i++) {
     total += analogRead(SIGNAL_PIN);
   }
 
-  float adc_value = total / (float)samples;
+  float avg = total / (float)oversamples;
 
-  float voltage = adc_value * ref_voltage / 1023.0;
-  float voltage_mV = voltage * 1000;
+  float voltage = avg * vref / 4095.0;
+  float mv = voltage * 1000.0 + 2;  // your offset
+  float amps = mv; // 1 mV = 1 A
 
-  Serial.print("Voltage (mV): ");
-  Serial.println(voltage_mV);
+  unsigned long currentTime = millis();
 
-  delay(50);
+  // Check if over limit
+  if (amps > MAX_AMPS) {
+    if (!isOverLimit) {
+      overLimitStart = currentTime;
+      isOverLimit = true;
+    }
+
+    // Check duration
+    if (currentTime - overLimitStart >= UNSAFE_DURATION) {
+      Serial.print("UNSAFE TRUE | Amps: ");
+      Serial.println(amps, 0);
+      return;
+    }
+  } else {
+    isOverLimit = false;
+  }
+
+  // Safe case
+  Serial.print("UNSAFE FALSE | Amps: ");
+  Serial.println(amps, 0);
+
+  delay(100);
 }
