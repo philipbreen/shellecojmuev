@@ -1,0 +1,66 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+#define SENSOR_PIN A0
+
+TM1637Display display(CLK, DIO);
+
+int threshold = 100;
+bool lastState = false;
+unsigned long lastPulseTime = 0;
+float rpm = 0;
+
+// Wheel radius in cm
+const float wheelRadiusCm = 25.0;
+
+void setup() {
+  Serial.begin(115200);
+  display.setBrightness(0x0f); // max brightness
+}
+
+void loop() {
+  int value = analogRead(SENSOR_PIN);
+  bool currentState = (value < threshold);
+
+  // Detect pulse (rising edge)
+  if (currentState && !lastState) {
+    unsigned long currentTime = micros();
+    unsigned long deltaTime = currentTime - lastPulseTime;
+    lastPulseTime = currentTime;
+
+    if (deltaTime > 0) {
+      float newRPM = 60000000.0 / deltaTime;
+      rpm = (rpm * 0.8) + (newRPM * 0.2); // smoothing
+    }
+  }
+
+  lastState = currentState;
+
+  // 2-second timeout → RPM = 0
+  if (micros() - lastPulseTime > 2000000) {
+    rpm = 0;
+  }
+
+  // Convert RPM → MPH
+  // Wheel circumference in meters
+  float wheelCircumferenceM = 2.0 * 3.14159265 * (wheelRadiusCm / 100.0);
+  // MPH = (RPM * circumference in meters * 60 min/hr * 60 sec/hr) / 1609.34 meters per mile
+  float mph = (rpm * wheelCircumferenceM * 60.0 / 1609.34);
+
+  // Convert MPH to int for 4-digit display
+  int displayMPH = (int)(mph + 0.5); // round to nearest integer
+  if (displayMPH > 9999) displayMPH = 9999;
+  if (displayMPH < 0) displayMPH = 0;
+
+  // Show MPH on TM1637
+  display.showNumberDec(displayMPH, true);
+
+  // Debug
+  Serial.print("RPM: ");
+  Serial.print(rpm);
+  Serial.print("  |  MPH: ");
+  Serial.println(mph, 2); // 2 decimal places
+  delay(50);
+}
