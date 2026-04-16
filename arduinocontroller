@@ -153,7 +153,7 @@ void updateDisplay(int displayMPH) {
   lcd.print("I:");
   if (current < 10) lcd.print(" ");
   lcd.print(current, 1);
-  lcd.print("A");
+lcd.print("A   ");
 
   lcd.setCursor(0, 1);
   lcd.print("MPH:");
