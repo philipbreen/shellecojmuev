@@ -1,0 +1,94 @@
+#include <Arduino.h>
+#include <Wire.h>
+
+const uint8_t ARDUINO_ADDR = 8;
+
+const float MAX_AMPS = 25.0;
+const unsigned long UNSAFE_DURATION = 333;
+
+float mockValues[] = {5, 10, 20, 30, 40, 55, 65, 15, 0};
+const size_t mockValueCount = sizeof(mockValues) / sizeof(mockValues[0]);
+
+size_t mockIndex = 0;
+unsigned long lastStepTime = 0;
+const unsigned long STEP_DURATION = 3000;
+
+unsigned long overLimitStart = 0;
+bool isOverLimit = false;
+bool isUnsafe = false;
+
+struct __attribute__((packed)) DataPacket {
+  float amps;
+  uint8_t unsafe;
+};
+
+void updateMockValue(float &amps);
+void updateSafety(float amps);
+uint8_t sendPacket(float amps, uint8_t unsafeFlag);
+void debugPrint(float amps, uint8_t unsafeFlag, uint8_t result);
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+  Wire.setClock(100000);
+}
+
+void loop() {
+  float amps = 0;
+
+  updateMockValue(amps);
+  updateSafety(amps);
+
+  uint8_t unsafeFlag = isUnsafe ? 1 : 0;
+  uint8_t result = sendPacket(amps, unsafeFlag);
+
+  debugPrint(amps, unsafeFlag, result);
+
+  delay(100);
+}
+
+void updateMockValue(float &amps) {
+  unsigned long now = millis();
+
+  if (now - lastStepTime >= STEP_DURATION) {
+    lastStepTime = now;
+    mockIndex++;
+    if (mockIndex >= mockValueCount) mockIndex = 0;
+  }
+
+  amps = mockValues[mockIndex];
+}
+
+void updateSafety(float amps) {
+  unsigned long now = millis();
+
+  if (amps > MAX_AMPS) {
+    if (!isOverLimit) {
+      overLimitStart = now;
+      isOverLimit = true;
+    }
+    isUnsafe = (now - overLimitStart >= UNSAFE_DURATION);
+  } else {
+    isOverLimit = false;
+    isUnsafe = false;
+  }
+}
+
+uint8_t sendPacket(float amps, uint8_t unsafeFlag) {
+  DataPacket packet;
+  packet.amps = amps;
+  packet.unsafe = unsafeFlag;
+
+  Wire.beginTransmission(ARDUINO_ADDR);
+  Wire.write((uint8_t*)&packet, sizeof(packet));
+  return Wire.endTransmission();
+}
+
+void debugPrint(float amps, uint8_t unsafeFlag, uint8_t result) {
+  Serial.print("Amps: ");
+  Serial.print(amps, 1);
+  Serial.print(" | Unsafe: ");
+  Serial.print(unsafeFlag ? "TRUE" : "FALSE");
+  Serial.print(" | I2C: ");
+  Serial.println(result);
+}
