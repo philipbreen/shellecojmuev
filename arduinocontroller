@@ -1,0 +1,168 @@
+#include <Arduino.h>
+#include <LiquidCrystal.h>
+#include <Wire.h>
+
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+struct __attribute__((packed)) DataPacket {
+  float amps;
+  uint8_t unsafe;
+};
+
+volatile DataPacket receivedData;
+volatile bool newData = false;
+
+unsigned long lastReceiveTime = 0;
+
+#define SENSOR_PIN A0
+
+const int throttlePin = A2;
+const int threshold = 100;
+const int pulsesPerRevolution = 2;
+
+bool lastState = false;
+unsigned long lastPulseTime = 0;
+float rpm = 0;
+
+int throttle = 0;
+float current = 0.0;
+bool safe = true;
+
+const float wheelRadiusCm = 25.0;
+
+// timing (non-blocking)
+unsigned long lastDisplayTime = 0;
+const unsigned long DISPLAY_INTERVAL = 100;
+
+void receiveEvent(int howMany);
+void updateRPM();
+void updateSpeed(float &mph, int &displayMPH);
+void updateI2C();
+void updateThrottle();
+void updateDisplay(int displayMPH);
+void debugPrint();
+
+void setup() {
+  lcd.begin(16, 2);
+  Serial.begin(115200);
+  pinMode(throttlePin, INPUT);
+
+  Wire.begin(8);
+  Wire.onReceive(receiveEvent);
+}
+
+void loop() {
+  updateRPM();
+
+  // fail-safe
+  if (millis() - lastReceiveTime > 500) {
+    safe = false;
+  }
+
+  updateI2C();
+  updateThrottle();
+
+  float mph = 0;
+  int displayMPH = 0;
+  updateSpeed(mph, displayMPH);
+
+  // non-blocking display + debug
+  if (millis() - lastDisplayTime >= DISPLAY_INTERVAL) {
+    lastDisplayTime = millis();
+
+    updateDisplay(displayMPH);
+//    debugPrint();
+  }
+}
+
+void receiveEvent(int howMany) {
+  if (howMany == sizeof(DataPacket)) {
+    Wire.readBytes((char*)&receivedData, sizeof(DataPacket));
+    newData = true;
+  } else {
+    while (Wire.available()) Wire.read();
+  }
+
+  lastReceiveTime = millis();
+}
+
+void updateRPM() {
+  int sensorValue = analogRead(SENSOR_PIN);
+  bool currentState = (sensorValue < threshold);
+  Serial.println(sensorValue);
+  if (currentState && !lastState) {
+    unsigned long now = micros();
+    unsigned long dt = now - lastPulseTime;
+    lastPulseTime = now;
+
+    if (dt > 5000) {
+      float newRPM = (60000000.0 / dt) / pulsesPerRevolution;
+      rpm = rpm * 0.8 + newRPM * 0.2;
+    }
+  }
+
+  if (micros() - lastPulseTime > 2000000) {
+    rpm = 0;
+  }
+
+  lastState = currentState;
+}
+
+void updateSpeed(float &mph, int &displayMPH) {
+  float wheelCircumference = 2.0 * 3.14159265 * (wheelRadiusCm / 100.0);
+  mph = rpm * wheelCircumference * 60.0 / 1609.34;
+
+  displayMPH = (int)(mph + 0.5);
+  if (displayMPH < 0) displayMPH = 0;
+}
+
+void updateI2C() {
+  if (newData) {
+    DataPacket data;
+
+    noInterrupts();
+    memcpy(&data, (const void*)&receivedData, sizeof(DataPacket));
+    newData = false;
+    interrupts();
+
+    current = data.amps;
+    safe = !data.unsafe;
+  }
+}
+
+void updateThrottle() {
+  throttle = round(map(analogRead(throttlePin), 0, 1023, 0, 100));
+}
+
+void updateDisplay(int displayMPH) {
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  if (throttle < 100) lcd.print(" ");
+  if (throttle < 10)  lcd.print(" ");
+  lcd.print(throttle);
+  lcd.print("% ");
+
+  lcd.print("I:");
+  if (current < 10) lcd.print(" ");
+  lcd.print(current, 1);
+  lcd.print("A");
+
+  lcd.setCursor(0, 1);
+  lcd.print("MPH:");
+  if (displayMPH < 10) lcd.print(" ");
+  lcd.print(displayMPH);
+
+  lcd.print(" RPM:");
+  if ((int)rpm < 1000) lcd.print(" ");
+  if ((int)rpm < 100)  lcd.print(" ");
+  if ((int)rpm < 10)   lcd.print(" ");
+  lcd.print((int)rpm);
+}
+
+void debugPrint() {
+  Serial.print("Current: ");
+  Serial.print(current, 1);
+  Serial.print(" A | Safe: ");
+  Serial.println(safe ? "SAFE" : "UNSAFE");
+}
