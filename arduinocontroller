@@ -42,12 +42,12 @@ void updateI2C();
 void updateThrottle();
 void updateDisplay(int displayMPH);
 void debugPrint();
-
+int buzzPin = 7;
 void setup() {
   lcd.begin(16, 2);
   Serial.begin(115200);
   pinMode(throttlePin, INPUT);
-
+pinMode(buzzPin, OUTPUT);
   Wire.begin(8);
   Wire.onReceive(receiveEvent);
 }
@@ -62,7 +62,14 @@ void loop() {
 
   updateI2C();
   updateThrottle();
+  if(safe==false){
+    digitalWrite(buzzPin,HIGH);
+ 
+  }
 
+  else{
+    digitalWrite(buzzPin,LOW);
+  }
   float mph = 0;
   int displayMPH = 0;
   updateSpeed(mph, displayMPH);
@@ -72,7 +79,7 @@ void loop() {
     lastDisplayTime = millis();
 
     updateDisplay(displayMPH);
-//    debugPrint();
+    debugPrint();
   }
 }
 
@@ -90,7 +97,7 @@ void receiveEvent(int howMany) {
 void updateRPM() {
   int sensorValue = analogRead(SENSOR_PIN);
   bool currentState = (sensorValue < threshold);
-  Serial.println(sensorValue);
+  //Serial.println(sensorValue);
   if (currentState && !lastState) {
     unsigned long now = micros();
     unsigned long dt = now - lastPulseTime;
