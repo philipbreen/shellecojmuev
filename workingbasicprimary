@@ -1,0 +1,54 @@
+//TALK TO YA BOYYY
+
+const int AHIN_PIN = 10;
+
+long frequency = 500; // CHANGE THIS
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(A0, INPUT);
+  pinMode(AHIN_PIN, OUTPUT);
+
+  digitalWrite(AHIN_PIN, LOW);
+}
+
+void loop() {
+  int sensorvalue = analogRead(A0);
+
+  if (frequency == 500) {
+    int output = map(sensorvalue, 0, 1023, 0, 255);
+    analogWrite(AHIN_PIN, output);
+    Serial.println(output);
+  } else {
+    int output = map(sensorvalue, 0, 1023, 0, 100);
+    pwmWrite(AHIN_PIN, output);
+    Serial.println(output);
+  }
+}
+
+void pwmWrite(uint8_t pin, uint8_t dutyCyclePercent) {
+  if (dutyCyclePercent > 100) dutyCyclePercent = 100;
+
+  static bool initialized = false;
+  if (!initialized) {
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1  = 0;
+
+    TCCR1A |= (1 << WGM11);
+    TCCR1B |= (1 << WGM12) | (1 << WGM13);
+
+    TCCR1B |= (1 << CS11);
+
+    long freqVal = ((16000000 / (8 * frequency)) - 1);
+    ICR1 = freqVal;
+
+    initialized = true;
+  }
+
+  if (pin == 10) {
+    pinMode(10, OUTPUT);
+    TCCR1A |= (1 << COM1B1);
+    OCR1B = (dutyCyclePercent * ICR1) / 100;
+  }
+}
